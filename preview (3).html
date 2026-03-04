@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cookie Dominion</title>
+
+<style>
+:root{
+    --brown1:#3a2415;
+    --brown2:#2b1a10;
+    --panel1:#6e4122;
+    --panel2:#4d2d17;
+    --gold:#ffcc55;
+    --text:#fff3dc;
+}
+
+body{
+    margin:0;
+    font-family: Tahoma, Verdana, sans-serif;
+    color:var(--text);
+    height:100vh;
+    display:flex;
+    overflow:hidden;
+    background:
+        repeating-linear-gradient(
+            45deg,
+            #3b2415,
+            #3b2415 30px,
+            #321e12 30px,
+            #321e12 60px
+        );
+}
+
+/* LEFT PANEL */
+#left{
+    width:260px;
+    background:linear-gradient(var(--panel1),var(--panel2));
+    border-right:6px solid #2a160c;
+    padding:15px;
+    box-sizing:border-box;
+}
+
+#logo{
+    font-size:26px;
+    text-align:center;
+    margin-bottom:15px;
+    text-shadow:2px 2px 4px #000;
+}
+
+.stat{
+    font-size:18px;
+    margin:10px 0;
+}
+
+/* CENTER */
+#center{
+    flex:1;
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+/* News Ticker */
+#ticker{
+    position:absolute;
+    top:0;
+    width:100%;
+    background:#2a160c;
+    padding:6px 0;
+    text-align:center;
+    font-size:14px;
+    border-bottom:3px solid #000;
+}
+
+/* COOKIE */
+#cookie{
+    width:340px;
+    height:340px;
+    border-radius:50%;
+    cursor:pointer;
+    position:relative;
+    background:
+        radial-gradient(circle at 35% 30%, #f8d48f 0%, #d8943f 60%, #9b5c1d 100%);
+    box-shadow:
+        inset -18px -25px 35px rgba(0,0,0,0.6),
+        inset 10px 10px 20px rgba(255,255,255,0.25),
+        0 30px 70px rgba(0,0,0,0.9);
+    transition: transform 0.08s;
+}
+#cookie:active{ transform:scale(0.95); }
+
+/* chips */
+#cookie::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    border-radius:50%;
+    background:
+        radial-gradient(circle at 80px 100px,#3b1f0f 14px,transparent 15px),
+        radial-gradient(circle at 220px 140px,#3b1f0f 16px,transparent 17px),
+        radial-gradient(circle at 160px 260px,#3b1f0f 13px,transparent 14px),
+        radial-gradient(circle at 280px 220px,#3b1f0f 10px,transparent 11px),
+        radial-gradient(circle at 130px 200px,#3b1f0f 12px,transparent 13px),
+        radial-gradient(circle at 270px 80px,#3b1f0f 11px,transparent 12px),
+        radial-gradient(circle at 180px 60px,#3b1f0f 9px,transparent 10px);
+}
+
+/* RIGHT PANEL */
+#right{
+    width:360px;
+    background:linear-gradient(var(--panel1),var(--panel2));
+    border-left:6px solid #2a160c;
+    overflow-y:auto;
+    padding:10px;
+    box-sizing:border-box;
+}
+
+.store-item{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:8px;
+    margin-bottom:6px;
+    background:rgba(0,0,0,0.25);
+    border-radius:4px;
+    cursor:pointer;
+    transition:0.15s;
+}
+.store-item:hover{
+    background:rgba(0,0,0,0.4);
+}
+
+.store-info{
+    font-size:14px;
+}
+
+.floating{
+    position:absolute;
+    font-size:18px;
+    animation:floatUp 1s forwards;
+    pointer-events:none;
+}
+@keyframes floatUp{
+    0%{opacity:1; transform:translateY(0);}
+    100%{opacity:0; transform:translateY(-60px);}
+}
+
+/* Golden cookie */
+#golden{
+    position:absolute;
+    width:100px;
+    height:100px;
+    border-radius:50%;
+    background:
+        radial-gradient(circle at 30% 30%, #fff799 0%, #ffae00 60%, #cc8400 100%);
+    box-shadow:0 0 35px #ffd700;
+    display:none;
+    cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div id="left">
+    <div id="logo">Cookie Dominion</div>
+    <div class="stat">Cookies: <span id="cookies">0</span></div>
+    <div class="stat">Per Second: <span id="cps">0</span></div>
+</div>
+
+<div id="center">
+    <div id="ticker">A quiet bakery begins its rise...</div>
+    <div id="cookie"></div>
+</div>
+
+<div id="right">
+    <h3>Store</h3>
+    <div id="store"></div>
+</div>
+
+<div id="golden"></div>
+
+<script>
+const state={
+    cookies:0,
+    cookiesPerClick:1,
+    cookiesPerSecond:0,
+    items:[
+        {name:"Cursor",base:15,cps:0.1,count:0},
+        {name:"Grandma",base:100,cps:1,count:0},
+        {name:"Farm",base:1100,cps:8,count:0},
+        {name:"Factory",base:12000,cps:47,count:0}
+    ]
+};
+
+const cookiesEl=document.getElementById("cookies");
+const cpsEl=document.getElementById("cps");
+const cookieEl=document.getElementById("cookie");
+const storeEl=document.getElementById("store");
+const golden=document.getElementById("golden");
+
+function price(i){ return Math.floor(i.base*Math.pow(1.15,i.count)); }
+
+function recalc(){
+    state.cookiesPerSecond=0;
+    state.items.forEach(i=>state.cookiesPerSecond+=i.cps*i.count);
+}
+
+function update(){
+    cookiesEl.textContent=Math.floor(state.cookies);
+    cpsEl.textContent=state.cookiesPerSecond.toFixed(1);
+}
+
+cookieEl.onclick=(e)=>{
+    state.cookies+=state.cookiesPerClick;
+    const f=document.createElement("div");
+    f.className="floating";
+    f.style.left=e.pageX+"px";
+    f.style.top=e.pageY+"px";
+    f.textContent="+"+state.cookiesPerClick;
+    document.body.appendChild(f);
+    setTimeout(()=>f.remove(),1000);
+    update();
+};
+
+function render(){
+    storeEl.innerHTML="";
+    state.items.forEach(i=>{
+        const div=document.createElement("div");
+        div.className="store-item";
+        div.innerHTML=`
+            <div class="store-info">
+                <strong>${i.name}</strong><br>
+                Owned: ${i.count} | CPS: ${i.cps}
+            </div>
+            <div>${price(i)}</div>
+        `;
+        div.onclick=()=>{
+            const p=price(i);
+            if(state.cookies>=p){
+                state.cookies-=p;
+                i.count++;
+                recalc();
+                render();
+                update();
+            }
+        };
+        storeEl.appendChild(div);
+    });
+}
+
+setInterval(()=>{
+    state.cookies+=state.cookiesPerSecond;
+    update();
+},1000);
+
+/* Golden cookie */
+function spawnGolden(){
+    golden.style.display="block";
+    golden.style.left=Math.random()*(window.innerWidth-120)+"px";
+    golden.style.top=Math.random()*(window.innerHeight-120)+"px";
+    setTimeout(()=>golden.style.display="none",8000);
+}
+golden.onclick=()=>{
+    state.cookies+=state.cookiesPerSecond*30;
+    golden.style.display="none";
+    update();
+};
+setInterval(()=>{ if(Math.random()<0.1) spawnGolden(); },15000);
+
+render();
+update();
+</script>
+
+</body>
+</html>
